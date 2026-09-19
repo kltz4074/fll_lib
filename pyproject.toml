@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fll-lib"
+version = "1.2.0"
+description = "FLL robot-control library for the LEGO SPIKE Prime running Pybricks, with a desktop simulation backend."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    { name = "fll_lib contributors" },
+]
+keywords = ["fll", "lego", "spike-prime", "pybricks", "robotics", "micropython"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: Implementation :: MicroPython",
+    "Topic :: Education",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+Homepage = "https://github.com/kltzqu/fll_lib"
+Repository = "https://github.com/kltzqu/fll_lib"
+
+[tool.setuptools]
+packages = [
+    "fll_lib",
+    "fll_lib.core",
+    "fll_lib.control",
+    "fll_lib.missions",
+    "fll_lib.utils",
+]
