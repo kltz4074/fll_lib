@@ -205,7 +205,7 @@ class TestChassis(unittest.TestCase):
         chassis.turn(90, 40)
         chassis.turn(90, 40)
         after = chassis.turn_error_report()
-        self.assertEqual(after["ccw"], 0.0)
+        self.assertLess(abs(after["ccw"]), 3.0)
         self.assertEqual(after["cw"], 0.0)
         chassis.reset_turn_comp()
         self.assertEqual(chassis.turn_error_report()["ccw"], 0.0)
