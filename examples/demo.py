@@ -14,14 +14,7 @@ def run():
     log.clear()
     log.log("=== FLL LIBRARY DEMO ===")
 
-    robot = create_robot(
-        left_wheel_port="A",
-        right_wheel_port="B",
-        left_manipulator_port="C",
-        right_manipulator_port="D",
-        left_manipulator_limits=(-120, 120),
-        right_manipulator_limits=(-120, 120),
-    )
+    robot = create_robot()
 
     robot.reset_gyro()
     log.log("gyro reset, safe_heading={}".format(robot.heading()))

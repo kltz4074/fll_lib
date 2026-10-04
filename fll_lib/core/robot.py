@@ -14,6 +14,7 @@ def _manip_speed(spd):
 class Robot:
     def __init__(self, left_wheel, right_wheel, gyro, drift, chassis,
                  manip_l, manip_r, config):
+        config = merge_config(config)
         self.left_wheel = left_wheel
         self.right_wheel = right_wheel
         self.gyro = gyro
@@ -25,7 +26,7 @@ class Robot:
         self.config = config
 
         self.release_manips_on_drive = bool(
-            config.get("release_manips_on_drive", True))
+            config["release_manips_on_drive"])
 
     def _maybe_release_manips(self):
         if self.release_manips_on_drive:
@@ -41,30 +42,30 @@ class Robot:
 
     def forward(self, distance_cm=None, speed=None):
         cm = distance_cm if distance_cm is not None else 30
-        spd = speed if speed is not None else self.config.get("drive_speed", 60)
+        spd = speed if speed is not None else self.config["drive_speed"]
         self._maybe_release_manips()
         return self.chassis.forward(cm, spd)
 
     def backward(self, distance_cm=None, speed=None):
         cm = distance_cm if distance_cm is not None else 30
-        spd = speed if speed is not None else self.config.get("drive_speed", 60)
+        spd = speed if speed is not None else self.config["drive_speed"]
         self._maybe_release_manips()
         return self.chassis.backward(cm, spd)
 
     def turn_right(self, angle_deg=90, speed=None):
-        spd = speed if speed is not None else self.config.get("turn_speed", 40)
+        spd = speed if speed is not None else self.config["turn_speed"]
         self._maybe_release_manips()
         return self.chassis.turn(angle_deg, spd)
 
     def turn_left(self, angle_deg=90, speed=None):
-        spd = speed if speed is not None else self.config.get("turn_speed", 40)
+        spd = speed if speed is not None else self.config["turn_speed"]
         self._maybe_release_manips()
         return self.chassis.turn(-angle_deg, spd)
 
     def turn_to_heading(self, heading_deg, speed=None):
 
         delta = self.chassis.normalize_angle_delta(heading_deg - self.gyro.yaw())
-        spd = speed if speed is not None else self.config.get("turn_speed", 40)
+        spd = speed if speed is not None else self.config["turn_speed"]
         self._maybe_release_manips()
         return self.chassis.turn(delta, spd)
 
@@ -104,8 +105,8 @@ class Robot:
             return self.turn_to_heading(final_heading, speed=speed)
         travel = Robot._atan2_deg(dy, dx)
         delta = self.chassis.normalize_angle_delta(travel - self.pose.heading())
-        spd = speed if speed is not None else self.config.get("drive_speed", 60)
-        turn_spd = self.config.get("turn_speed", 40)
+        spd = speed if speed is not None else self.config["drive_speed"]
+        turn_spd = self.config["turn_speed"]
         self._maybe_release_manips()
         ok = self.chassis.turn(delta, turn_spd)
         if ok:
@@ -140,12 +141,12 @@ class Robot:
 
     def move_manip_l(self, angle, speed=None):
         self.manip_l.speed = _manip_speed(
-            speed if speed is not None else self.config.get("manipulator_speed", 50))
+            speed if speed is not None else self.config["manipulator_speed"])
         return self.manip_l.move_to(angle)
 
     def move_manip_r(self, angle, speed=None):
         self.manip_r.speed = _manip_speed(
-            speed if speed is not None else self.config.get("manipulator_speed", 50))
+            speed if speed is not None else self.config["manipulator_speed"])
         return self.manip_r.move_to(angle)
 
     def manip_l_angle(self):
@@ -166,7 +167,7 @@ class Robot:
         self.manip_r.calibrate_zero(angle_r)
 
     def move_both_manipulators(self, angle_l, angle_r, speed=None):
-        spd = _manip_speed(speed if speed is not None else self.config.get("manipulator_speed", 50))
+        spd = _manip_speed(speed if speed is not None else self.config["manipulator_speed"])
         return Manipulator.move_both(self.manip_l, angle_l, self.manip_r, angle_r, spd)
 
 
@@ -208,39 +209,39 @@ def create_robot(config=None,
                          "must be different ports")
 
     left = WheelDriver(cfg["left_wheel_port"], is_left=True,
-                       sign=cfg.get("left_wheel_sign", 1))
+                       sign=cfg["left_wheel_sign"])
     right = WheelDriver(cfg["right_wheel_port"], is_left=False,
-                        sign=cfg.get("right_wheel_sign", 1))
+                        sign=cfg["right_wheel_sign"])
     gyro = GyroSensor(opts=cfg)
     gyro.attach_wheels(left, right)
     drift = DriftCompensator(
-        forward=cfg.get("drift_forward_factor", 1.0),
-        backward=cfg.get("drift_backward_factor", 1.0),
+        forward=cfg["drift_forward_factor"],
+        backward=cfg["drift_backward_factor"],
     )
 
     lm = WheelDriver(cfg["left_manipulator_port"])
     rm = WheelDriver(cfg["right_manipulator_port"])
 
-    lm_lim = cfg.get("left_manipulator_limits", [-120, 120])
-    rm_lim = cfg.get("right_manipulator_limits", [-120, 120])
-    safe_margin = cfg.get("manipulator_safe_margin", 10)
-    manip_speed = _manip_speed(cfg.get("manipulator_speed", 50))
-    hold_at_end = bool(cfg.get("manipulator_hold", True))
-    manip_debug = bool(cfg.get("manipulator_debug", False))
+    lm_lim = cfg["left_manipulator_limits"]
+    rm_lim = cfg["right_manipulator_limits"]
+    safe_margin = cfg["manipulator_safe_margin"]
+    manip_speed = _manip_speed(cfg["manipulator_speed"])
+    hold_at_end = bool(cfg["manipulator_hold"])
+    manip_debug = bool(cfg["manipulator_debug"])
 
     manip_l = Manipulator(motor=lm,
                           min_angle=lm_lim[0], max_angle=lm_lim[1],
                           safe_margin=safe_margin, speed=manip_speed,
-                          tolerance=cfg.get("manipulator_tolerance", 1.0),
+                          tolerance=cfg["manipulator_tolerance"],
                           hold_at_end=hold_at_end,
-                          offset=cfg.get("left_manipulator_offset", 0.0),
+                          offset=cfg["left_manipulator_offset"],
                           debug=manip_debug)
     manip_r = Manipulator(motor=rm,
                           min_angle=rm_lim[0], max_angle=rm_lim[1],
                           safe_margin=safe_margin, speed=manip_speed,
-                          tolerance=cfg.get("manipulator_tolerance", 1.0),
+                          tolerance=cfg["manipulator_tolerance"],
                           hold_at_end=hold_at_end,
-                          offset=cfg.get("right_manipulator_offset", 0.0),
+                          offset=cfg["right_manipulator_offset"],
                           debug=manip_debug)
 
     chassis = DifferentialDrive(left, right, gyro, drift, cfg)

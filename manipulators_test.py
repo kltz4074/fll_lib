@@ -6,18 +6,7 @@ from fll_lib.utils import sleep_ms
 def run():
     log = Logger(console=True, filepath=None)
 
-    robot = create_robot(
-        left_wheel_port="B",
-        right_wheel_port="D",
-        left_manipulator_port="A",
-        right_manipulator_port="C",
-        left_manipulator_limits=(-180, 180),
-        right_manipulator_limits=(-180, 180),
-        left_wheel_sign=1,
-        right_wheel_sign=-1,
-        turn_sign=-1,
-        turn_debug=False,
-    )
+    robot = create_robot()
 
     log.log("MANIPULATOR ANGLE TEST")
     log.log("Put arms in a safe pose, then wait 2 s...")

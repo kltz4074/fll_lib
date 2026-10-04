@@ -1,5 +1,4 @@
 from fll_lib.core.robot import create_robot
-from fll_lib.runtime import detect_platform
 from fll_lib.utils.logging import Logger
 from fll_lib.utils import sleep_ms
 
@@ -7,19 +6,7 @@ from fll_lib.utils import sleep_ms
 def run():
     log = Logger(console=True, filepath=None)
 
-    on_mock = detect_platform() == "mock"
-    robot = create_robot(
-        left_wheel_port="B",
-        right_wheel_port="D",
-        left_manipulator_port="A",
-        right_manipulator_port="C",
-        left_manipulator_limits=(-120, 120),
-        right_manipulator_limits=(-120, 120),
-        left_wheel_sign=1,
-        right_wheel_sign=-1 if not on_mock else 1,
-        turn_sign=-1 if not on_mock else None,
-        turn_debug=True,
-    )
+    robot = create_robot()
 
     log.log("=== ACCURACY TEST: back-home round trip ===")
     log.log("keep robot still 2s while the gyro calibrates")

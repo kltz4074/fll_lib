@@ -268,6 +268,28 @@ class TestConfigurationAndAdapters(unittest.TestCase):
         self.assertEqual(a.config["gyro_pid"]["ki"], 0.1)
         self.assertEqual(cfg["wheel_diameter_cm"], 5.6)
 
+    def test_shared_pid_options_reach_controller(self):
+        robot = create_robot(config={"gyro_pid": {
+            "kp": 7.0, "deadzone": 1.2, "deriv_filter": 0.4}})
+        self.assertEqual(robot.chassis.heading_pid.kp, 7.0)
+        self.assertEqual(robot.chassis.heading_pid.deadzone, 1.2)
+        self.assertEqual(robot.chassis.heading_pid.deriv_filter, 0.4)
+        self.assertEqual(robot.chassis.heading_pid.ki, 0.1)
+
+    def test_shared_hardware_settings_without_filesystem(self):
+        from fll_lib import config
+        previous = config.PLATFORM
+        try:
+            config.PLATFORM = "pybricks"
+            cfg = config.load_config("does_not_exist_anyway.json")
+            self.assertEqual(cfg["left_wheel_port"], "B")
+            self.assertEqual(cfg["right_wheel_port"], "D")
+            self.assertEqual(cfg["right_wheel_sign"], -1)
+            self.assertEqual(cfg["turn_sign"], -1)
+            self.assertEqual(config.merge_config({"turn_sign": 1})["turn_sign"], 1)
+        finally:
+            config.PLATFORM = previous
+
     def test_wheel_sign_is_applied_once(self):
         from fll_lib.core.motors import WheelDriver
         wheel = WheelDriver("A", sign=-1)

@@ -12,23 +12,26 @@ PLATFORM = detect_platform()
 
 PI = 3.141592653589793
 
+# Edit robot settings here. Every create_robot() call loads these values.
 DEFAULTS = {
     "wheel_diameter_cm": 5.6,
     "wheel_circumference_cm": 5.6 * PI,
     "track_width_cm": 14.5,
-    "left_wheel_port": "A",
-    "right_wheel_port": "B",
-    "left_manipulator_port": "C",
-    "right_manipulator_port": "D",
+    "left_wheel_port": "B",
+    "right_wheel_port": "D",
+    "left_manipulator_port": "A",
+    "right_manipulator_port": "C",
     "left_wheel_sign": 1,
     "right_wheel_sign": 1,
+    "turn_sign": None,
     "pybricks_top_side": "Z",
     "pybricks_front_side": "X",
     "left_manipulator_limits": [-120, 120],
     "right_manipulator_limits": [-120, 120],
-"manipulator_safe_margin": 10,
+    "manipulator_safe_margin": 10,
     "max_speed": 100,
-    "gyro_pid": {"kp": 2.0, "ki": 0.1, "kd": 0.3, "integral_limit": 15},
+    "gyro_pid": {"kp": 2.0, "ki": 0.1, "kd": 0.3, "integral_limit": 15,
+                 "deadzone": 0.5, "deriv_filter": 0.15},
     "turn_control": {
         "settle_tolerance": 1.5,
         "settle_wheel_speed": 45.0,
@@ -85,6 +88,13 @@ DEFAULTS = {
 }
 
 
+# Mirrored wheel and gyro direction on the physical robot.
+# The desktop mock uses the directions from DEFAULTS above.
+PYBRICKS_OVERRIDES = {
+    "right_wheel_sign": -1,
+    "turn_sign": -1,
+}
+
 def has_filesystem():
     return PLATFORM != "pybricks"
 
@@ -98,6 +108,8 @@ def _clone_defaults():
             cfg[key] = list(value)
         else:
             cfg[key] = value
+    if PLATFORM == "pybricks":
+        cfg = _merge_deep(cfg, PYBRICKS_OVERRIDES)
     return cfg
 
 

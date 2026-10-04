@@ -1,83 +1,52 @@
 from fll_lib.utils import normalize_angle, clamp, sleep_ms, now_ms, ticks_diff
 from fll_lib.control.pid import GyroPID
+from fll_lib.config import merge_config
 from fll_lib.utils.logging import Logger
 from fll_lib.core.pose import PoseTracker
 
 
 class DifferentialDrive:
     def __init__(self, left, right, gyro, drift, config, pose=None):
+        config = merge_config(config)
         self.left = left
         self.right = right
         self.gyro = gyro
         self.drift = drift
-        self.wheel_circumference_cm = config.get("wheel_circumference_cm", 5.6 * 3.14159)
-        self.max_speed = clamp(config.get("max_speed", 100), 1, 100)
+        self.wheel_circumference_cm = config["wheel_circumference_cm"]
+        self.max_speed = clamp(config["max_speed"], 1, 100)
         self.pose = pose or PoseTracker(self.wheel_circumference_cm)
-        self._launch_scale = max(0.0, config.get("drive_launch_scale", 0.6))
-        self._launch_ms = max(0, config.get("drive_launch_ms", 300))
-        self._end_ramp_deg = max(5.0, float(config.get("drive_end_ramp_deg", 40.0)))
-        self._end_min_power = clamp(float(config.get("drive_end_min_power", 18.0)),
+        self._launch_scale = max(0.0, config["drive_launch_scale"])
+        self._launch_ms = max(0, config["drive_launch_ms"])
+        self._end_ramp_deg = max(5.0, float(config["drive_end_ramp_deg"]))
+        self._end_min_power = clamp(float(config["drive_end_min_power"]),
                                     0.0, 100.0) / 100.0
-        self._luff_enable = bool(config.get("drive_luff_enable", True))
-        self._luff_power = clamp(float(config.get("drive_luff_power", 22.0)), 0.0, 100.0)
-        self._luff_ms = max(0, int(config.get("drive_luff_ms", 30)))
-        self.drive_stop_mode = config.get("drive_stop_mode", "hold")
-        self.turn_debug = bool(config.get("turn_debug", False))
+        self._luff_enable = bool(config["drive_luff_enable"])
+        self._luff_power = clamp(float(config["drive_luff_power"]), 0.0, 100.0)
+        self._luff_ms = max(0, int(config["drive_luff_ms"]))
+        self.drive_stop_mode = config["drive_stop_mode"]
+        self.turn_debug = bool(config["turn_debug"])
         self._dbg = Logger(console=True) if self.turn_debug else None
         self._dbg_state = None
         self._dbg_t = -1
 
-        g_pid = config.get("gyro_pid", {"kp": 2.0, "ki": 0.1, "kd": 0.3})
-        self.heading_pid = GyroPID(
-            get_heading=self.gyro.yaw,
-            kp=g_pid.get("kp", 2.0),
-            ki=g_pid.get("ki", 0.1),
-            kd=g_pid.get("kd", 0.3),
-            output_limits=(-self.max_speed, self.max_speed),
-            deadzone=0.5,
-            integral_limit=g_pid.get("integral_limit", 15),
-        )
+        g_pid = dict(config["gyro_pid"])
+        g_pid["output_limits"] = (-self.max_speed, self.max_speed)
+        self.heading_pid = GyroPID(get_heading=self.gyro.yaw, **g_pid)
         self.turn_sign = 1
         self._turn_calibrated = False
         ts0 = config.get("turn_sign")
         if ts0 is not None:
             self.turn_sign = 1 if ts0 >= 0 else -1
             self._turn_calibrated = True
-        tc = config.get("turn_control", {})
-        self.turn_cfg = {
-            "settle_tolerance": tc.get("settle_tolerance", 3.0),
-            "settle_wheel_speed": tc.get("settle_wheel_speed", 45.0),
-            "settle_reads": tc.get("settle_reads", 3),
-            "settle_ms": tc.get("settle_ms", 30),
-            "fallback_tolerance": tc.get("fallback_tolerance", 4.0),
-            "stop_mode": tc.get("stop_mode", "hold"),
-            "turndown_deg": tc.get("turndown_deg", 25.0),
-            "fast_ramp": tc.get("fast_ramp", 28),
-            "creep_duty": tc.get("creep_duty", 30),
-            "creep_ramp": tc.get("creep_ramp", 8),
-            "stop_deg": tc.get("stop_deg", 4.0),
-            "latch_wait_ms": tc.get("latch_wait_ms", 60),
-            "latch_max_ms": tc.get("latch_max_ms", 350),
-            "tap_duty": tc.get("tap_duty", 34),
-            "tap_wheel_deg": tc.get("tap_wheel_deg", 8.0),
-            "tap_min_deg": tc.get("tap_min_deg", 1.5),
-            "tap_ratio": tc.get("tap_ratio", 1.6),
-            "tap_max_ms": tc.get("tap_max_ms", 600),
-            "tap_max": tc.get("tap_max", 3),
-            "tap_revert_deg": tc.get("tap_revert_deg", 8.0),
-            "budget_base_ms": tc.get("budget_base_ms", 650),
-            "budget_per_deg": tc.get("budget_per_deg", 9.0),
-            "budget_min_ms": tc.get("budget_min_ms", 800),
-            "budget_max_ms": tc.get("budget_max_ms", 2600),
-        }
+        self.turn_cfg = dict(config["turn_control"])
 
-        comp = config.get("turn_error_compensation", {})
-        self.turn_comp_enabled = bool(comp.get("enabled", True))
+        comp = config["turn_error_compensation"]
+        self.turn_comp_enabled = bool(comp["enabled"])
+        self._comp_alpha = float(comp["alpha"])
+        self._comp_min_sample = float(comp["min_sample_deg"])
+        self._comp_max_corr = float(comp["max_correction_deg"])
+        self._comp_max_sample = float(comp["max_sample_deg"])
 
-        self._comp_alpha = float(comp.get("alpha", 0.1))
-        self._comp_min_sample = float(comp.get("min_sample_deg", 1.5))
-        self._comp_max_corr = float(comp.get("max_correction_deg", 6.0))
-        self._comp_max_sample = float(comp.get("max_sample_deg", 8.0))
         self._turn_comp = {1: 0.0, -1: 0.0}
         self._tl = 0.0
         self._tr = 0.0

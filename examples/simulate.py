@@ -1,42 +1,16 @@
 import os
 import sys
-import math
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-from fll_lib.mocks import MockHub
-from fll_lib.core.robot import Robot
-from fll_lib.core.chassis import DifferentialDrive
-from fll_lib.core.manipulator import Manipulator
-from fll_lib.control.drift import DriftCompensator
+from fll_lib.core.robot import create_robot
 from fll_lib.utils.logging import Logger
 from fll_lib.utils import sleep_ms
 from fll_lib.missions.path_runner import PathRunner
 
-CONFIG = {
-    "wheel_circumference_cm": 5.6 * math.pi,
-    "max_speed": 100,
-    "gyro_pid": {"kp": 8.0, "ki": 0.0, "kd": 1.5},
-    "manipulator_safe_margin": 10,
-    "manipulator_tolerance": 1.0,
-    "drive_speed": 60,
-    "turn_speed": 40,
-    "manipulator_speed": 50,
-}
-
-
-def build_mock_robot(hub):
-    drift = DriftCompensator()
-    chassis = DifferentialDrive(hub.left_motor, hub.right_motor, hub.gyro, drift, CONFIG)
-    manip_l = Manipulator(hub.left_manipulator, -120, 120, 10, 50)
-    manip_r = Manipulator(hub.right_manipulator, -120, 120, 10, 50)
-    return Robot(hub.left_motor, hub.right_motor, hub.gyro, drift,
-                 chassis, manip_l, manip_r, CONFIG)
-
 
 def simulate():
-    hub = MockHub()
-    robot = build_mock_robot(hub)
+    robot = create_robot()
     log = Logger(console=True, filepath=None)
 
     def say(msg):

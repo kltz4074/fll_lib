@@ -7,7 +7,7 @@ MicroPython robot-control library for LEGO SPIKE Prime running [Pybricks](https:
 | SPIKE Prime hub | Pybricks firmware (`pybricks.hubs` / `pybricks.pupdevices`) |
 | Desktop | Mock simulation (`fll_lib.mocks`), no hardware |
 
-Only MicroPython-safe features are used (methods, not `@property`). The hub has no filesystem, so `config.json` and file logging are skipped there — configure via `create_robot(...)` arguments.
+Only MicroPython-safe features are used (methods, not `@property`). The hub has no filesystem, so `config.json` and file logging are skipped there — edit `fll_lib/config.py`; it is imported on every launch.
 
 ## Quick start
 
@@ -31,13 +31,7 @@ python -m unittest discover tests  # unit tests
 ```python
 from fll_lib.core.robot import create_robot
 
-robot = create_robot(
-    left_wheel_port="B",            right_wheel_port="D",
-    left_manipulator_port="A",      right_manipulator_port="C",
-    left_manipulator_limits=(-120, 120),   right_manipulator_limits=(-120, 120),
-    left_wheel_sign=1,              right_wheel_sign=-1,
-    turn_sign=-1,
-)
+robot = create_robot()  # ports, directions and limits come from fll_lib/config.py
 ```
 
 | Argument | Meaning |
@@ -167,13 +161,21 @@ scores.total_score()
 
 ## Configuration
 
-Priority: `create_robot(...)` arguments > `config.json` > built-in `DEFAULTS` (`fll_lib/config.py`). On the PC, `fll_lib.config.load_config("config.json")` merges defaults with the file; `merge_config(...)` does the same for a dict.
+Edit **`fll_lib/config.py`** to configure all launch scripts in one place:
+
+- `DEFAULTS`: PID (`gyro_pid`: `kp`, `ki`, `kd`, `integral_limit`, `deadzone`, `deriv_filter`), ports, geometry, speeds, manipulator limits, drive ramps and turn settings.
+- `PYBRICKS_OVERRIDES`: hardware-specific motor/turn directions. The desktop mock uses the directions in `DEFAULTS`.
+
+All bundled launch scripts use `create_robot()` and automatically import these settings, including on the hub without a filesystem. Shared arm limits are now ±120° with a 10° safety margin (previous scripts used different limits). Speeds passed to individual movement commands remain per-command overrides.
 
 ```python
-robot = create_robot({"drive_speed": 75, "turn_speed": 60,
-                      "gyro_pid": {"kp": 2.0, "ki": 0.1, "kd": 0.3, "integral_limit": 15}},
-                     left_wheel_port="B", right_wheel_port="D")
+from fll_lib.core.robot import create_robot
+
+robot = create_robot()
+robot.forward(30)  # uses drive_speed from the shared config
 ```
+
+Optional overrides remain supported: explicit `create_robot(...)` arguments override a supplied config dict; a supplied dict merges with the shared settings. Without a supplied dict, desktop launches also load legacy `config.json` from the current directory. On the hub JSON loading is skipped. For one configuration source, edit the Python config and omit JSON/launch overrides.
 
 Key drive options: `max_speed` (100), `drive_speed` (75), `drive_stop_mode` ("hold"), `drive_launch_scale` (0.6), `drive_launch_ms` (300), `drive_end_ramp_deg` (40), `drive_end_min_power` (18), `drive_luff_enable/power/ms` (true/22/30), `drift_forward_factor`, `drift_backward_factor`.
 
@@ -204,7 +206,7 @@ Tuning notes: drift on launch → lower `drive_launch_scale`/higher `drive_launc
 | Arm won't move (`move_*` → `False`) | Encoder/physics mismatch; place arms safely and call `reset_manip_zero()`. |
 | `ImportError: math.hypot` on hub | Use `(x*x + y*y) ** 0.5` — MicroPython lacks `math.hypot`. |
 | Arm reaches short of target | `manipulator_safe_margin` clips the request. |
-| Arm won't move, config ignored | On hub there is no `config.json` — pass ports/limits to `create_robot(...)`. |
+| Arm won't move, config ignored | Edit ports/limits in `fll_lib/config.py`, then upload the program again. |
 | Turn unsynced with gyro | Check `pybricks_top_side` / `pybricks_front_side` for the hub mount. |
 
 ## License
